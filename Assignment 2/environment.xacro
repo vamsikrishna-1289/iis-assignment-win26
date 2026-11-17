@@ -1,0 +1,106 @@
+<?xml version="1.0"?>
+<!--
+  environment.xacro : simplified kitchen objects of the task
+    fridge (open front, 3 shelves at 0.4 / 0.8 / 1.2 m), counter (top at 0.9 m),
+    milk carton (0.1 x 0.1 x 0.2 m), Eva's mug (r = 0.08 m, h = 0.12 m)
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <material name="fridge_white"><color rgba="0.92 0.92 0.95 1.0"/></material>
+  <material name="counter_wood"><color rgba="0.60 0.42 0.25 1.0"/></material>
+  <material name="milk_blue"><color rgba="0.85 0.90 1.0 1.0"/></material>
+  <material name="mug_green"><color rgba="0.10 0.65 0.35 1.0"/></material>
+
+  <!-- one box = one visual + one collision, centred at (px,py,pz) inside the current link -->
+  <xacro:macro name="env_box" params="sx sy sz px:=0 py:=0 pz:=0 material">
+    <visual>
+      <origin xyz="${px} ${py} ${pz}" rpy="0 0 0"/>
+      <geometry><box size="${sx} ${sy} ${sz}"/></geometry>
+      <material name="${material}"/>
+    </visual>
+    <collision>
+      <origin xyz="${px} ${py} ${pz}" rpy="0 0 0"/>
+      <geometry><box size="${sx} ${sy} ${sz}"/></geometry>
+    </collision>
+  </xacro:macro>
+
+  <!-- Fridge frame: centre of the front opening on the floor, +x points INTO the fridge. -->
+  <xacro:macro name="fridge" params="name parent *origin width:=0.70 depth:=0.65 height:=1.80 wall:=0.03
+                                     shelf_1:=0.40 shelf_2:=0.80 shelf_3:=1.20 shelf_thickness:=0.02">
+    <link name="${name}_link">
+      <xacro:env_box sx="${depth}" sy="${width}" sz="${wall}" px="${depth/2}" pz="${wall/2}" material="fridge_white"/>
+      <xacro:env_box sx="${depth}" sy="${width}" sz="${wall}" px="${depth/2}" pz="${height-wall/2}" material="fridge_white"/>
+      <xacro:env_box sx="${wall}" sy="${width}" sz="${height}" px="${depth-wall/2}" pz="${height/2}" material="fridge_white"/>
+      <xacro:env_box sx="${depth}" sy="${wall}" sz="${height}" px="${depth/2}" py="${width/2-wall/2}" pz="${height/2}" material="fridge_white"/>
+      <xacro:env_box sx="${depth}" sy="${wall}" sz="${height}" px="${depth/2}" py="${-width/2+wall/2}" pz="${height/2}" material="fridge_white"/>
+      <!-- shelves: the TOP surface of each board is at shelf_k -->
+      <xacro:env_box sx="${depth-wall}" sy="${width-2*wall}" sz="${shelf_thickness}" px="${(depth-wall)/2}" pz="${shelf_1-shelf_thickness/2}" material="fridge_white"/>
+      <xacro:env_box sx="${depth-wall}" sy="${width-2*wall}" sz="${shelf_thickness}" px="${(depth-wall)/2}" pz="${shelf_2-shelf_thickness/2}" material="fridge_white"/>
+      <xacro:env_box sx="${depth-wall}" sy="${width-2*wall}" sz="${shelf_thickness}" px="${(depth-wall)/2}" pz="${shelf_3-shelf_thickness/2}" material="fridge_white"/>
+    </link>
+    <joint name="${name}_joint" type="fixed">
+      <parent link="${parent}"/>
+      <child link="${name}_link"/>
+      <xacro:insert_block name="origin"/>
+    </joint>
+  </xacro:macro>
+
+  <!-- Counter: frame at the centre of the box. -->
+  <xacro:macro name="counter" params="name parent *origin length:=1.2 depth:=0.6 height:=0.90">
+    <link name="${name}_link">
+      <xacro:env_box sx="${length}" sy="${depth}" sz="${height}" material="counter_wood"/>
+    </link>
+    <joint name="${name}_joint" type="fixed">
+      <parent link="${parent}"/>
+      <child link="${name}_link"/>
+      <xacro:insert_block name="origin"/>
+    </joint>
+  </xacro:macro>
+
+  <!-- Milk carton: frame at the centre of the carton. -->
+  <xacro:macro name="milk_carton" params="name parent *origin width:=0.10 depth:=0.10 height:=0.20 mass:=0.5">
+    <link name="${name}_link">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="${mass}"/>
+        <inertia ixx="${mass/12.0*(depth*depth+height*height)}" ixy="0.0" ixz="0.0"
+                 iyy="${mass/12.0*(width*width+height*height)}" iyz="0.0"
+                 izz="${mass/12.0*(width*width+depth*depth)}"/>
+      </inertial>
+      <xacro:env_box sx="${width}" sy="${depth}" sz="${height}" material="milk_blue"/>
+    </link>
+    <joint name="${name}_joint" type="fixed">
+      <parent link="${parent}"/>
+      <child link="${name}_link"/>
+      <xacro:insert_block name="origin"/>
+    </joint>
+  </xacro:macro>
+
+  <!-- Mug: frame at the centre of the mug (solid cylinder stands in for the mug). -->
+  <xacro:macro name="mug" params="name parent *origin radius:=0.08 height:=0.12 mass:=0.3">
+    <link name="${name}_link">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="${mass}"/>
+        <inertia ixx="${mass/12.0*(3*radius*radius+height*height)}" ixy="0.0" ixz="0.0"
+                 iyy="${mass/12.0*(3*radius*radius+height*height)}" iyz="0.0"
+                 izz="${mass/2.0*radius*radius}"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry><cylinder radius="${radius}" length="${height}"/></geometry>
+        <material name="mug_green"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry><cylinder radius="${radius}" length="${height}"/></geometry>
+      </collision>
+    </link>
+    <joint name="${name}_joint" type="fixed">
+      <parent link="${parent}"/>
+      <child link="${name}_link"/>
+      <xacro:insert_block name="origin"/>
+    </joint>
+  </xacro:macro>
+
+</robot>

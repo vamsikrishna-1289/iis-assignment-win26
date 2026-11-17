@@ -1,0 +1,170 @@
+<?xml version="1.0"?>
+<!-- arm.xacro : lift column + carriage + 2 revolute joints (shoulder, elbow).
+     Frame of the arm = base of the column (on top of the pedestal).
+     carriage_link sits at TCP height: TCP z = base_height + lift_joint. -->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <material name="arm_white"><color rgba="0.92 0.92 0.95 1.0"/></material>
+  <material name="arm_dark"><color rgba="0.12 0.12 0.14 1.0"/></material>
+  <material name="arm_teal"><color rgba="0.10 0.75 0.80 1.0"/></material>
+
+  <xacro:macro name="arm" params="parent *origin column_radius column_height lift_lower lift_upper
+                                  link1_length link2_length">
+
+    <xacro:property name="col_mass"  value="5.0"/>
+    <xacro:property name="car_mass"  value="1.0"/>
+    <xacro:property name="l1_mass"   value="1.5"/>
+    <xacro:property name="l2_mass"   value="1.0"/>
+    <xacro:property name="link_w"    value="0.06"/>
+    <xacro:property name="link_h"    value="0.04"/>
+
+    <!-- ===== lift column ===== -->
+    <joint name="column_fixed_joint" type="fixed">
+      <parent link="${parent}"/>
+      <child link="column_link"/>
+      <xacro:insert_block name="origin"/>
+    </joint>
+
+    <link name="column_link">
+      <inertial>
+        <origin xyz="0 0 ${column_height/2}" rpy="0 0 0"/>
+        <mass value="${col_mass}"/>
+        <inertia ixx="${col_mass/12.0*(3*column_radius*column_radius+column_height*column_height)}" ixy="0.0" ixz="0.0"
+                 iyy="${col_mass/12.0*(3*column_radius*column_radius+column_height*column_height)}" iyz="0.0"
+                 izz="${col_mass/2.0*column_radius*column_radius}"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 ${column_height/2}" rpy="0 0 0"/>
+        <geometry><cylinder radius="${column_radius}" length="${column_height}"/></geometry>
+        <material name="arm_white"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 ${column_height/2}" rpy="0 0 0"/>
+        <geometry><cylinder radius="${column_radius}" length="${column_height}"/></geometry>
+      </collision>
+      <!-- dark foot and teal top cap (visual only) -->
+      <visual>
+        <origin xyz="0 0 0.02" rpy="0 0 0"/>
+        <geometry><cylinder radius="${column_radius + 0.02}" length="0.04"/></geometry>
+        <material name="arm_dark"/>
+      </visual>
+      <visual>
+        <origin xyz="0 0 ${column_height - 0.005}" rpy="0 0 0"/>
+        <geometry><cylinder radius="${column_radius + 0.005}" length="0.01"/></geometry>
+        <material name="arm_teal"/>
+      </visual>
+    </link>
+
+    <!-- ===== lift joint (vertical carriage) ===== -->
+    <joint name="lift_joint" type="prismatic">
+      <parent link="column_link"/>
+      <child link="carriage_link"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <axis xyz="0 0 1"/>
+      <limit lower="${lift_lower}" upper="${lift_upper}" effort="200.0" velocity="0.2"/>
+    </joint>
+
+    <link name="carriage_link">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="${car_mass}"/>
+        <inertia ixx="${car_mass/12.0*(0.10*0.10+0.12*0.12)}" ixy="0.0" ixz="0.0"
+                 iyy="${car_mass/12.0*(0.10*0.10+0.12*0.12)}" iyz="0.0"
+                 izz="${car_mass/12.0*(0.10*0.10+0.10*0.10)}"/>
+      </inertial>
+      <visual>
+        <geometry><box size="0.10 0.10 0.12"/></geometry>
+        <material name="arm_dark"/>
+      </visual>
+      <collision>
+        <geometry><box size="0.10 0.10 0.12"/></geometry>
+      </collision>
+      <visual>
+        <origin xyz="0 0 0.062" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.05" length="0.004"/></geometry>
+        <material name="arm_teal"/>
+      </visual>
+    </link>
+
+    <!-- ===== shoulder ===== -->
+    <joint name="joint1" type="revolute">
+      <parent link="carriage_link"/>
+      <child link="link1"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <axis xyz="0 0 1"/>
+      <limit lower="-2.8" upper="2.8" effort="60.0" velocity="1.0"/>
+    </joint>
+
+    <link name="link1">
+      <inertial>
+        <origin xyz="${link1_length/2} 0 -0.03" rpy="0 0 0"/>
+        <mass value="${l1_mass}"/>
+        <inertia ixx="${l1_mass/12.0*(link_w*link_w+link_h*link_h)}" ixy="0.0" ixz="0.0"
+                 iyy="${l1_mass/12.0*(link1_length*link1_length+link_h*link_h)}" iyz="0.0"
+                 izz="${l1_mass/12.0*(link1_length*link1_length+link_w*link_w)}"/>
+      </inertial>
+      <visual>
+        <origin xyz="${link1_length/2} 0 -0.03" rpy="0 0 0"/>
+        <geometry><box size="${link1_length} ${link_w} ${link_h}"/></geometry>
+        <material name="arm_white"/>
+      </visual>
+      <collision>
+        <origin xyz="${link1_length/2} 0 -0.03" rpy="0 0 0"/>
+        <geometry><box size="${link1_length} ${link_w} ${link_h}"/></geometry>
+      </collision>
+      <!-- teal stripe along the link (visual only) -->
+      <visual>
+        <origin xyz="${link1_length/2} 0 -0.0095" rpy="0 0 0"/>
+        <geometry><box size="${link1_length*0.8} 0.02 0.001"/></geometry>
+        <material name="arm_teal"/>
+      </visual>
+      <!-- shoulder cap -->
+      <visual>
+        <origin xyz="0 0 -0.03" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.045" length="0.05"/></geometry>
+        <material name="arm_dark"/>
+      </visual>
+    </link>
+
+    <!-- ===== elbow ===== -->
+    <joint name="joint2" type="revolute">
+      <parent link="link1"/>
+      <child link="link2"/>
+      <origin xyz="${link1_length} 0 0" rpy="0 0 0"/>
+      <axis xyz="0 0 1"/>
+      <limit lower="-2.6" upper="2.6" effort="40.0" velocity="1.0"/>
+    </joint>
+
+    <link name="link2">
+      <inertial>
+        <origin xyz="${link2_length/2} 0 0" rpy="0 0 0"/>
+        <mass value="${l2_mass}"/>
+        <inertia ixx="${l2_mass/12.0*(link_w*link_w+link_h*link_h)}" ixy="0.0" ixz="0.0"
+                 iyy="${l2_mass/12.0*(link2_length*link2_length+link_h*link_h)}" iyz="0.0"
+                 izz="${l2_mass/12.0*(link2_length*link2_length+link_w*link_w)}"/>
+      </inertial>
+      <visual>
+        <origin xyz="${link2_length/2} 0 0" rpy="0 0 0"/>
+        <geometry><box size="${link2_length} ${link_w} ${link_h}"/></geometry>
+        <material name="arm_white"/>
+      </visual>
+      <collision>
+        <origin xyz="${link2_length/2} 0 0" rpy="0 0 0"/>
+        <geometry><box size="${link2_length} ${link_w} ${link_h}"/></geometry>
+      </collision>
+      <visual>
+        <origin xyz="${link2_length/2} 0 0.0205" rpy="0 0 0"/>
+        <geometry><box size="${link2_length*0.8} 0.02 0.001"/></geometry>
+        <material name="arm_teal"/>
+      </visual>
+      <!-- elbow cap -->
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.045" length="0.05"/></geometry>
+        <material name="arm_dark"/>
+      </visual>
+    </link>
+
+  </xacro:macro>
+
+</robot>

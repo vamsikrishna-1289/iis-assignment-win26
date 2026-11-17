@@ -1,0 +1,702 @@
+<?xml version="1.0"?>
+<!--
+  robot_only.xacro : SINGLE SELF-CONTAINED FILE (no includes), "robotic" visual upgrade.
+  Robot only (base + lift column + head + 2-joint arm + gripper). No kitchen scene.
+  Root link = base_link.
+-->
+<robot name="drink_serving_robot" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ================= MATERIALS ================= -->
+  <material name="base_grey"><color rgba="0.35 0.35 0.40 1.0"/></material>
+  <material name="base_dark"><color rgba="0.12 0.12 0.14 1.0"/></material>
+  <material name="accent_teal"><color rgba="0.10 0.75 0.80 1.0"/></material>
+  <material name="led_cyan"><color rgba="0.30 0.95 1.00 1.0"/></material>
+  <material name="tyre_black"><color rgba="0.05 0.05 0.05 1.0"/></material>
+  <material name="stop_red"><color rgba="0.85 0.08 0.08 1.0"/></material>
+  <material name="warn_yellow"><color rgba="0.95 0.78 0.10 1.0"/></material>
+
+  <material name="arm_white"><color rgba="0.92 0.92 0.95 1.0"/></material>
+  <material name="arm_dark"><color rgba="0.12 0.12 0.14 1.0"/></material>
+  <material name="arm_teal"><color rgba="0.10 0.75 0.80 1.0"/></material>
+
+  <material name="gripper_black"><color rgba="0.10 0.10 0.10 1.0"/></material>
+  <material name="gripper_silver"><color rgba="0.75 0.75 0.78 1.0"/></material>
+  <material name="cam_blue"><color rgba="0.15 0.25 0.60 1.0"/></material>
+
+  <!-- ================= HELPER: 4 bolt heads on a circle (visual only) ================= -->
+  <xacro:macro name="bolts4" params="r z">
+    <visual>
+      <origin xyz="${r} 0 ${z}" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.004" length="0.006"/></geometry>
+      <material name="gripper_silver"/>
+    </visual>
+    <visual>
+      <origin xyz="${-r} 0 ${z}" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.004" length="0.006"/></geometry>
+      <material name="gripper_silver"/>
+    </visual>
+    <visual>
+      <origin xyz="0 ${r} ${z}" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.004" length="0.006"/></geometry>
+      <material name="gripper_silver"/>
+    </visual>
+    <visual>
+      <origin xyz="0 ${-r} ${z}" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.004" length="0.006"/></geometry>
+      <material name="gripper_silver"/>
+    </visual>
+  </xacro:macro>
+
+  <!-- ================= BASE MACRO ================= -->
+  <xacro:macro name="base" params="name base_radius base_height base_mass:=10.0 wheel_radius:=0.06 wheel_width:=0.04">
+    <link name="${name}">
+      <inertial>
+        <origin xyz="0 0 ${base_height/2}" rpy="0 0 0"/>
+        <mass value="${base_mass}"/>
+        <inertia ixx="${base_mass/12.0 * (3*base_radius*base_radius + base_height*base_height)}" ixy="0.0" ixz="0.0"
+                 iyy="${base_mass/12.0 * (3*base_radius*base_radius + base_height*base_height)}" iyz="0.0"
+                 izz="${base_mass/2.0 * base_radius*base_radius}"/>
+      </inertial>
+
+      <!-- main body -->
+      <visual>
+        <origin xyz="0 0 ${base_height/2}" rpy="0 0 0"/>
+        <geometry><cylinder radius="${base_radius}" length="${base_height}"/></geometry>
+        <material name="base_grey"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 ${base_height/2}" rpy="0 0 0"/>
+        <geometry><cylinder radius="${base_radius}" length="${base_height}"/></geometry>
+      </collision>
+
+      <!-- dark skirt (visual only) -->
+      <visual>
+        <origin xyz="0 0 0.03" rpy="0 0 0"/>
+        <geometry><cylinder radius="${base_radius + 0.008}" length="0.06"/></geometry>
+        <material name="base_dark"/>
+      </visual>
+
+      <!-- bumper ring (visual only) -->
+      <visual>
+        <origin xyz="0 0 0.09" rpy="0 0 0"/>
+        <geometry><cylinder radius="${base_radius + 0.012}" length="0.02"/></geometry>
+        <material name="base_dark"/>
+      </visual>
+
+      <!-- teal accent ring (visual only) -->
+      <visual>
+        <origin xyz="0 0 ${base_height - 0.035}" rpy="0 0 0"/>
+        <geometry><cylinder radius="${base_radius + 0.004}" length="0.015"/></geometry>
+        <material name="accent_teal"/>
+      </visual>
+
+      <!-- drive wheels (visual only) -->
+      <visual>
+        <origin xyz="0 ${base_radius - 0.01} ${wheel_radius}" rpy="${pi/2} 0 0"/>
+        <geometry><cylinder radius="${wheel_radius}" length="${wheel_width}"/></geometry>
+        <material name="tyre_black"/>
+      </visual>
+      <visual>
+        <origin xyz="0 ${-(base_radius - 0.01)} ${wheel_radius}" rpy="${pi/2} 0 0"/>
+        <geometry><cylinder radius="${wheel_radius}" length="${wheel_width}"/></geometry>
+        <material name="tyre_black"/>
+      </visual>
+      <!-- wheel hubs -->
+      <visual>
+        <origin xyz="0 ${base_radius + 0.012} ${wheel_radius}" rpy="${pi/2} 0 0"/>
+        <geometry><cylinder radius="0.03" length="0.006"/></geometry>
+        <material name="gripper_silver"/>
+      </visual>
+      <visual>
+        <origin xyz="0 ${-(base_radius + 0.012)} ${wheel_radius}" rpy="${pi/2} 0 0"/>
+        <geometry><cylinder radius="0.03" length="0.006"/></geometry>
+        <material name="gripper_silver"/>
+      </visual>
+
+      <!-- front LED status bar -->
+      <visual>
+        <origin xyz="${base_radius} 0 ${base_height - 0.10}" rpy="0 0 0"/>
+        <geometry><box size="0.01 0.14 0.014"/></geometry>
+        <material name="led_cyan"/>
+      </visual>
+
+      <!-- front vent slats -->
+      <visual>
+        <origin xyz="${base_radius - 0.002} 0 ${base_height - 0.15}" rpy="0 0 0"/>
+        <geometry><box size="0.01 0.10 0.008"/></geometry>
+        <material name="base_dark"/>
+      </visual>
+      <visual>
+        <origin xyz="${base_radius - 0.002} 0 ${base_height - 0.17}" rpy="0 0 0"/>
+        <geometry><box size="0.01 0.10 0.008"/></geometry>
+        <material name="base_dark"/>
+      </visual>
+      <visual>
+        <origin xyz="${base_radius - 0.002} 0 ${base_height - 0.19}" rpy="0 0 0"/>
+        <geometry><box size="0.01 0.10 0.008"/></geometry>
+        <material name="base_dark"/>
+      </visual>
+
+      <!-- emergency stop button on the back of the top deck -->
+      <visual>
+        <origin xyz="-0.16 0 ${base_height + 0.003}" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.03" length="0.006"/></geometry>
+        <material name="warn_yellow"/>
+      </visual>
+      <visual>
+        <origin xyz="-0.16 0 ${base_height + 0.016}" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.02" length="0.02"/></geometry>
+        <material name="stop_red"/>
+      </visual>
+    </link>
+
+    <!-- lidar on the top front edge of the base -->
+    <link name="lidar_link">
+      <visual>
+        <geometry><cylinder radius="0.035" length="0.045"/></geometry>
+        <material name="base_dark"/>
+      </visual>
+      <visual>
+        <origin xyz="0 0 0.0225" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.037" length="0.008"/></geometry>
+        <material name="accent_teal"/>
+      </visual>
+    </link>
+    <joint name="lidar_joint" type="fixed">
+      <parent link="${name}"/>
+      <child link="lidar_link"/>
+      <origin xyz="${base_radius - 0.07} 0 ${base_height + 0.0225}" rpy="0 0 0"/>
+    </joint>
+  </xacro:macro>
+
+  <!-- ================= ARM MACRO ================= -->
+  <xacro:macro name="arm" params="parent *origin column_radius column_height lift_lower lift_upper
+                                  link1_length link2_length">
+
+    <xacro:property name="col_mass"  value="5.0"/>
+    <xacro:property name="car_mass"  value="1.0"/>
+    <xacro:property name="l1_mass"   value="1.5"/>
+    <xacro:property name="l2_mass"   value="1.0"/>
+    <xacro:property name="link_w"    value="0.06"/>
+    <xacro:property name="link_h"    value="0.04"/>
+
+    <!-- ===== lift column ===== -->
+    <joint name="column_fixed_joint" type="fixed">
+      <parent link="${parent}"/>
+      <child link="column_link"/>
+      <xacro:insert_block name="origin"/>
+    </joint>
+
+    <link name="column_link">
+      <inertial>
+        <origin xyz="0 0 ${column_height/2}" rpy="0 0 0"/>
+        <mass value="${col_mass}"/>
+        <inertia ixx="${col_mass/12.0*(3*column_radius*column_radius+column_height*column_height)}" ixy="0.0" ixz="0.0"
+                 iyy="${col_mass/12.0*(3*column_radius*column_radius+column_height*column_height)}" iyz="0.0"
+                 izz="${col_mass/2.0*column_radius*column_radius}"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 ${column_height/2}" rpy="0 0 0"/>
+        <geometry><cylinder radius="${column_radius}" length="${column_height}"/></geometry>
+        <material name="arm_white"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 ${column_height/2}" rpy="0 0 0"/>
+        <geometry><cylinder radius="${column_radius}" length="${column_height}"/></geometry>
+      </collision>
+
+      <!-- dark foot and teal top cap -->
+      <visual>
+        <origin xyz="0 0 0.02" rpy="0 0 0"/>
+        <geometry><cylinder radius="${column_radius + 0.02}" length="0.04"/></geometry>
+        <material name="arm_dark"/>
+      </visual>
+      <visual>
+        <origin xyz="0 0 ${column_height - 0.005}" rpy="0 0 0"/>
+        <geometry><cylinder radius="${column_radius + 0.005}" length="0.01"/></geometry>
+        <material name="arm_teal"/>
+      </visual>
+
+      <!-- twin guide rails -->
+      <visual>
+        <origin xyz="0 ${column_radius + 0.006} ${column_height/2}" rpy="0 0 0"/>
+        <geometry><box size="0.012 0.012 ${column_height - 0.10}"/></geometry>
+        <material name="gripper_silver"/>
+      </visual>
+      <visual>
+        <origin xyz="0 ${-(column_radius + 0.006)} ${column_height/2}" rpy="0 0 0"/>
+        <geometry><box size="0.012 0.012 ${column_height - 0.10}"/></geometry>
+        <material name="gripper_silver"/>
+      </visual>
+
+      <!-- cable chain on the back of the column -->
+      <visual>
+        <origin xyz="${-(column_radius + 0.010)} 0 ${column_height*0.5}" rpy="0 0 0"/>
+        <geometry><box size="0.02 0.04 ${column_height*0.85}"/></geometry>
+        <material name="arm_dark"/>
+      </visual>
+      <visual>
+        <origin xyz="${-(column_radius + 0.0205)} 0 ${column_height*0.5}" rpy="0 0 0"/>
+        <geometry><box size="0.001 0.012 ${column_height*0.85}"/></geometry>
+        <material name="arm_teal"/>
+      </visual>
+
+      <!-- ring bands -->
+      <visual>
+        <origin xyz="0 0 ${column_height*0.15}" rpy="0 0 0"/>
+        <geometry><cylinder radius="${column_radius + 0.003}" length="0.008"/></geometry>
+        <material name="arm_teal"/>
+      </visual>
+      <visual>
+        <origin xyz="0 0 ${column_height*0.45}" rpy="0 0 0"/>
+        <geometry><cylinder radius="${column_radius + 0.003}" length="0.008"/></geometry>
+        <material name="arm_dark"/>
+      </visual>
+      <visual>
+        <origin xyz="0 0 ${column_height*0.75}" rpy="0 0 0"/>
+        <geometry><cylinder radius="${column_radius + 0.003}" length="0.008"/></geometry>
+        <material name="arm_teal"/>
+      </visual>
+
+      <!-- ===== sensor head on top of the column (visual only) ===== -->
+      <visual>  <!-- neck -->
+        <origin xyz="0 0 ${column_height + 0.02}" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.02" length="0.04"/></geometry>
+        <material name="arm_dark"/>
+      </visual>
+      <visual>  <!-- head housing -->
+        <origin xyz="0 0 ${column_height + 0.08}" rpy="0 0 0"/>
+        <geometry><box size="0.09 0.16 0.08"/></geometry>
+        <material name="arm_dark"/>
+      </visual>
+      <visual>  <!-- face screen -->
+        <origin xyz="0.0455 0 ${column_height + 0.08}" rpy="0 0 0"/>
+        <geometry><box size="0.002 0.13 0.05"/></geometry>
+        <material name="arm_teal"/>
+      </visual>
+      <visual>  <!-- left eye -->
+        <origin xyz="0.0475 0.03 ${column_height + 0.08}" rpy="0 0 0"/>
+        <geometry><box size="0.002 0.025 0.02"/></geometry>
+        <material name="led_cyan"/>
+      </visual>
+      <visual>  <!-- right eye -->
+        <origin xyz="0.0475 -0.03 ${column_height + 0.08}" rpy="0 0 0"/>
+        <geometry><box size="0.002 0.025 0.02"/></geometry>
+        <material name="led_cyan"/>
+      </visual>
+      <visual>  <!-- ear sensors -->
+        <origin xyz="0 0.085 ${column_height + 0.08}" rpy="${pi/2} 0 0"/>
+        <geometry><cylinder radius="0.02" length="0.01"/></geometry>
+        <material name="gripper_silver"/>
+      </visual>
+      <visual>
+        <origin xyz="0 -0.085 ${column_height + 0.08}" rpy="${pi/2} 0 0"/>
+        <geometry><cylinder radius="0.02" length="0.01"/></geometry>
+        <material name="gripper_silver"/>
+      </visual>
+      <visual>  <!-- antenna -->
+        <origin xyz="-0.03 0.06 ${column_height + 0.16}" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.003" length="0.12"/></geometry>
+        <material name="gripper_silver"/>
+      </visual>
+      <visual>  <!-- antenna tip -->
+        <origin xyz="-0.03 0.06 ${column_height + 0.22}" rpy="0 0 0"/>
+        <geometry><sphere radius="0.008"/></geometry>
+        <material name="stop_red"/>
+      </visual>
+      <visual>  <!-- status beacon -->
+        <origin xyz="0 0 ${column_height + 0.125}" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.02" length="0.01"/></geometry>
+        <material name="led_cyan"/>
+      </visual>
+    </link>
+
+    <!-- ===== lift joint (vertical carriage) ===== -->
+    <joint name="lift_joint" type="prismatic">
+      <parent link="column_link"/>
+      <child link="carriage_link"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <axis xyz="0 0 1"/>
+      <limit lower="${lift_lower}" upper="${lift_upper}" effort="200.0" velocity="0.2"/>
+    </joint>
+
+    <link name="carriage_link">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="${car_mass}"/>
+        <inertia ixx="${car_mass/12.0*(0.10*0.10+0.12*0.12)}" ixy="0.0" ixz="0.0"
+                 iyy="${car_mass/12.0*(0.10*0.10+0.12*0.12)}" iyz="0.0"
+                 izz="${car_mass/12.0*(0.10*0.10+0.10*0.10)}"/>
+      </inertial>
+      <visual>
+        <geometry><box size="0.10 0.10 0.12"/></geometry>
+        <material name="arm_dark"/>
+      </visual>
+      <collision>
+        <geometry><box size="0.10 0.10 0.12"/></geometry>
+      </collision>
+      <visual>
+        <origin xyz="0 0 0.062" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.05" length="0.004"/></geometry>
+        <material name="arm_teal"/>
+      </visual>
+      <!-- teal band around the carriage -->
+      <visual>
+        <origin xyz="0 0 0.03" rpy="0 0 0"/>
+        <geometry><box size="0.104 0.104 0.008"/></geometry>
+        <material name="arm_teal"/>
+      </visual>
+    </link>
+
+    <!-- ===== shoulder ===== -->
+    <joint name="joint1" type="revolute">
+      <parent link="carriage_link"/>
+      <child link="link1"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <axis xyz="0 0 1"/>
+      <limit lower="-2.8" upper="2.8" effort="60.0" velocity="1.0"/>
+    </joint>
+
+    <link name="link1">
+      <inertial>
+        <origin xyz="${link1_length/2} 0 -0.03" rpy="0 0 0"/>
+        <mass value="${l1_mass}"/>
+        <inertia ixx="${l1_mass/12.0*(link_w*link_w+link_h*link_h)}" ixy="0.0" ixz="0.0"
+                 iyy="${l1_mass/12.0*(link1_length*link1_length+link_h*link_h)}" iyz="0.0"
+                 izz="${l1_mass/12.0*(link1_length*link1_length+link_w*link_w)}"/>
+      </inertial>
+      <visual>
+        <origin xyz="${link1_length/2} 0 -0.03" rpy="0 0 0"/>
+        <geometry><box size="${link1_length} ${link_w} ${link_h}"/></geometry>
+        <material name="arm_white"/>
+      </visual>
+      <collision>
+        <origin xyz="${link1_length/2} 0 -0.03" rpy="0 0 0"/>
+        <geometry><box size="${link1_length} ${link_w} ${link_h}"/></geometry>
+      </collision>
+      <!-- teal stripe -->
+      <visual>
+        <origin xyz="${link1_length/2} 0 -0.0095" rpy="0 0 0"/>
+        <geometry><box size="${link1_length*0.8} 0.02 0.001"/></geometry>
+        <material name="arm_teal"/>
+      </visual>
+      <!-- shoulder actuator housing, teal ring and bolts -->
+      <visual>
+        <origin xyz="0 0 -0.03" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.055" length="0.08"/></geometry>
+        <material name="arm_dark"/>
+      </visual>
+      <visual>
+        <origin xyz="0 0 -0.065" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.057" length="0.008"/></geometry>
+        <material name="arm_teal"/>
+      </visual>
+      <xacro:bolts4 r="0.04" z="0.013"/>
+      <!-- ribs across the link -->
+      <visual>
+        <origin xyz="${link1_length*0.25} 0 -0.03" rpy="0 0 0"/>
+        <geometry><box size="0.012 ${link_w + 0.008} ${link_h + 0.008}"/></geometry>
+        <material name="arm_dark"/>
+      </visual>
+      <visual>
+        <origin xyz="${link1_length*0.5} 0 -0.03" rpy="0 0 0"/>
+        <geometry><box size="0.012 ${link_w + 0.008} ${link_h + 0.008}"/></geometry>
+        <material name="arm_dark"/>
+      </visual>
+      <visual>
+        <origin xyz="${link1_length*0.75} 0 -0.03" rpy="0 0 0"/>
+        <geometry><box size="0.012 ${link_w + 0.008} ${link_h + 0.008}"/></geometry>
+        <material name="arm_dark"/>
+      </visual>
+      <!-- piston rod on top with mounting blocks -->
+      <visual>
+        <origin xyz="${link1_length*0.5} 0.025 0.003" rpy="0 ${pi/2} 0"/>
+        <geometry><cylinder radius="0.006" length="${link1_length*0.6}"/></geometry>
+        <material name="gripper_silver"/>
+      </visual>
+      <visual>
+        <origin xyz="${link1_length*0.2} 0.025 -0.002" rpy="0 0 0"/>
+        <geometry><box size="0.03 0.02 0.02"/></geometry>
+        <material name="arm_dark"/>
+      </visual>
+      <visual>
+        <origin xyz="${link1_length*0.8} 0.025 -0.002" rpy="0 0 0"/>
+        <geometry><box size="0.03 0.02 0.02"/></geometry>
+        <material name="arm_dark"/>
+      </visual>
+    </link>
+
+    <!-- ===== elbow ===== -->
+    <joint name="joint2" type="revolute">
+      <parent link="link1"/>
+      <child link="link2"/>
+      <origin xyz="${link1_length} 0 0" rpy="0 0 0"/>
+      <axis xyz="0 0 1"/>
+      <limit lower="-2.6" upper="2.6" effort="40.0" velocity="1.0"/>
+    </joint>
+
+    <link name="link2">
+      <inertial>
+        <origin xyz="${link2_length/2} 0 0" rpy="0 0 0"/>
+        <mass value="${l2_mass}"/>
+        <inertia ixx="${l2_mass/12.0*(link_w*link_w+link_h*link_h)}" ixy="0.0" ixz="0.0"
+                 iyy="${l2_mass/12.0*(link2_length*link2_length+link_h*link_h)}" iyz="0.0"
+                 izz="${l2_mass/12.0*(link2_length*link2_length+link_w*link_w)}"/>
+      </inertial>
+      <visual>
+        <origin xyz="${link2_length/2} 0 0" rpy="0 0 0"/>
+        <geometry><box size="${link2_length} ${link_w} ${link_h}"/></geometry>
+        <material name="arm_white"/>
+      </visual>
+      <collision>
+        <origin xyz="${link2_length/2} 0 0" rpy="0 0 0"/>
+        <geometry><box size="${link2_length} ${link_w} ${link_h}"/></geometry>
+      </collision>
+      <!-- teal stripe -->
+      <visual>
+        <origin xyz="${link2_length/2} 0 0.0205" rpy="0 0 0"/>
+        <geometry><box size="${link2_length*0.8} 0.02 0.001"/></geometry>
+        <material name="arm_teal"/>
+      </visual>
+      <!-- elbow actuator housing, teal ring and bolts -->
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.052" length="0.08"/></geometry>
+        <material name="arm_dark"/>
+      </visual>
+      <visual>
+        <origin xyz="0 0 0.043" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.054" length="0.006"/></geometry>
+        <material name="arm_teal"/>
+      </visual>
+      <xacro:bolts4 r="0.035" z="0.043"/>
+      <!-- ribs -->
+      <visual>
+        <origin xyz="${link2_length*0.35} 0 0" rpy="0 0 0"/>
+        <geometry><box size="0.012 ${link_w + 0.008} ${link_h + 0.008}"/></geometry>
+        <material name="arm_dark"/>
+      </visual>
+      <visual>
+        <origin xyz="${link2_length*0.65} 0 0" rpy="0 0 0"/>
+        <geometry><box size="0.012 ${link_w + 0.008} ${link_h + 0.008}"/></geometry>
+        <material name="arm_dark"/>
+      </visual>
+      <!-- cable conduit on top with teal clamps -->
+      <visual>
+        <origin xyz="${link2_length*0.5} -0.025 0.026" rpy="0 ${pi/2} 0"/>
+        <geometry><cylinder radius="0.006" length="${link2_length*0.7}"/></geometry>
+        <material name="gripper_black"/>
+      </visual>
+      <visual>
+        <origin xyz="${link2_length*0.25} -0.025 0.026" rpy="0 ${pi/2} 0"/>
+        <geometry><cylinder radius="0.0075" length="0.01"/></geometry>
+        <material name="arm_teal"/>
+      </visual>
+      <visual>
+        <origin xyz="${link2_length*0.75} -0.025 0.026" rpy="0 ${pi/2} 0"/>
+        <geometry><cylinder radius="0.0075" length="0.01"/></geometry>
+        <material name="arm_teal"/>
+      </visual>
+      <!-- end flange before the wrist -->
+      <visual>
+        <origin xyz="${link2_length - 0.01} 0 0" rpy="0 ${pi/2} 0"/>
+        <geometry><cylinder radius="0.032" length="0.02"/></geometry>
+        <material name="arm_dark"/>
+      </visual>
+    </link>
+  </xacro:macro>
+
+  <!-- ================= GRIPPER MACROS ================= -->
+  <xacro:macro name="gripper_box_inertia" params="m x y z cx:=0.0">
+    <inertial>
+      <origin xyz="${cx} 0 0" rpy="0 0 0"/>
+      <mass value="${m}"/>
+      <inertia ixx="${m/12.0*(y*y+z*z)}" ixy="0.0" ixz="0.0"
+               iyy="${m/12.0*(x*x+z*z)}" iyz="0.0"
+               izz="${m/12.0*(x*x+y*y)}"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="gripper" params="parent *origin gripper_span
+                                      finger_length:=0.08 finger_thickness:=0.015
+                                      finger_height:=0.06 palm_depth:=0.04
+                                      roll_lower:=-2.4 roll_upper:=2.4
+                                      palm_mass:=0.4 finger_mass:=0.1">
+
+    <xacro:property name="palm_width" value="${gripper_span + 2*finger_thickness}"/>
+
+    <!-- wrist roll -->
+    <joint name="wrist_roll_joint" type="revolute">
+      <parent link="${parent}"/>
+      <child link="gripper_base_link"/>
+      <xacro:insert_block name="origin"/>
+      <axis xyz="1 0 0"/>
+      <limit lower="${roll_lower}" upper="${roll_upper}" effort="20.0" velocity="1.5"/>
+    </joint>
+
+    <link name="gripper_base_link">
+      <xacro:gripper_box_inertia m="${palm_mass}" x="${palm_depth}" y="${palm_width}" z="${finger_height}" cx="${palm_depth/2}"/>
+      <visual>
+        <origin xyz="${palm_depth/2} 0 0" rpy="0 0 0"/>
+        <geometry><box size="${palm_depth} ${palm_width} ${finger_height}"/></geometry>
+        <material name="gripper_black"/>
+      </visual>
+      <collision>
+        <origin xyz="${palm_depth/2} 0 0" rpy="0 0 0"/>
+        <geometry><box size="${palm_depth} ${palm_width} ${finger_height}"/></geometry>
+      </collision>
+      <!-- wrist actuator housing and teal ring (visual only) -->
+      <visual>
+        <origin xyz="-0.03 0 0" rpy="0 ${pi/2} 0"/>
+        <geometry><cylinder radius="0.04" length="0.06"/></geometry>
+        <material name="arm_dark"/>
+      </visual>
+      <visual>
+        <origin xyz="-0.005 0 0" rpy="0 ${pi/2} 0"/>
+        <geometry><cylinder radius="0.042" length="0.008"/></geometry>
+        <material name="arm_teal"/>
+      </visual>
+    </link>
+
+    <!-- left finger (+y) -->
+    <link name="left_finger_link">
+      <xacro:gripper_box_inertia m="${finger_mass}" x="${finger_length}" y="${finger_thickness}" z="${finger_height}" cx="${finger_length/2}"/>
+      <visual>
+        <origin xyz="${finger_length/2} ${(finger_thickness+0.004)/2} 0" rpy="0 0 0"/>
+        <geometry><box size="${finger_length} ${finger_thickness-0.004} ${finger_height}"/></geometry>
+        <material name="gripper_silver"/>
+      </visual>
+      <visual>
+        <origin xyz="${finger_length*0.65} 0.002 0" rpy="0 0 0"/>
+        <geometry><box size="${finger_length*0.6} 0.004 ${finger_height-0.01}"/></geometry>
+        <material name="gripper_black"/>
+      </visual>
+      <!-- teal fingertip cap -->
+      <visual>
+        <origin xyz="${finger_length - 0.004} ${finger_thickness/2} 0" rpy="0 0 0"/>
+        <geometry><box size="0.008 ${finger_thickness + 0.001} ${finger_height + 0.001}"/></geometry>
+        <material name="accent_teal"/>
+      </visual>
+      <collision>
+        <origin xyz="${finger_length/2} ${finger_thickness/2} 0" rpy="0 0 0"/>
+        <geometry><box size="${finger_length} ${finger_thickness} ${finger_height}"/></geometry>
+      </collision>
+    </link>
+
+    <joint name="left_finger_joint" type="prismatic">
+      <parent link="gripper_base_link"/>
+      <child link="left_finger_link"/>
+      <origin xyz="${palm_depth} 0 0" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="0.0" upper="${gripper_span/2}" effort="40.0" velocity="0.1"/>
+    </joint>
+
+    <!-- right finger (-y) -->
+    <link name="right_finger_link">
+      <xacro:gripper_box_inertia m="${finger_mass}" x="${finger_length}" y="${finger_thickness}" z="${finger_height}" cx="${finger_length/2}"/>
+      <visual>
+        <origin xyz="${finger_length/2} ${-(finger_thickness+0.004)/2} 0" rpy="0 0 0"/>
+        <geometry><box size="${finger_length} ${finger_thickness-0.004} ${finger_height}"/></geometry>
+        <material name="gripper_silver"/>
+      </visual>
+      <visual>
+        <origin xyz="${finger_length*0.65} -0.002 0" rpy="0 0 0"/>
+        <geometry><box size="${finger_length*0.6} 0.004 ${finger_height-0.01}"/></geometry>
+        <material name="gripper_black"/>
+      </visual>
+      <!-- teal fingertip cap -->
+      <visual>
+        <origin xyz="${finger_length - 0.004} ${-finger_thickness/2} 0" rpy="0 0 0"/>
+        <geometry><box size="0.008 ${finger_thickness + 0.001} ${finger_height + 0.001}"/></geometry>
+        <material name="accent_teal"/>
+      </visual>
+      <collision>
+        <origin xyz="${finger_length/2} ${-finger_thickness/2} 0" rpy="0 0 0"/>
+        <geometry><box size="${finger_length} ${finger_thickness} ${finger_height}"/></geometry>
+      </collision>
+    </link>
+
+    <joint name="right_finger_joint" type="prismatic">
+      <parent link="gripper_base_link"/>
+      <child link="right_finger_link"/>
+      <origin xyz="${palm_depth} 0 0" rpy="0 0 0"/>
+      <axis xyz="0 -1 0"/>
+      <limit lower="0.0" upper="${gripper_span/2}" effort="40.0" velocity="0.1"/>
+      <mimic joint="left_finger_joint" multiplier="1.0" offset="0.0"/>
+    </joint>
+
+    <!-- tool centre point -->
+    <link name="tcp_link"/>
+    <joint name="tcp_joint" type="fixed">
+      <parent link="gripper_base_link"/>
+      <child link="tcp_link"/>
+      <origin xyz="${palm_depth + finger_length/2} 0 0" rpy="0 0 0"/>
+    </joint>
+
+    <!-- stereo wrist camera with two lenses -->
+    <link name="wrist_camera_link">
+      <visual>
+        <geometry><box size="0.025 0.06 0.02"/></geometry>
+        <material name="cam_blue"/>
+      </visual>
+      <visual>
+        <origin xyz="0.0135 0.015 0" rpy="0 ${pi/2} 0"/>
+        <geometry><cylinder radius="0.007" length="0.006"/></geometry>
+        <material name="led_cyan"/>
+      </visual>
+      <visual>
+        <origin xyz="0.0135 -0.015 0" rpy="0 ${pi/2} 0"/>
+        <geometry><cylinder radius="0.007" length="0.006"/></geometry>
+        <material name="led_cyan"/>
+      </visual>
+    </link>
+    <joint name="wrist_camera_joint" type="fixed">
+      <parent link="gripper_base_link"/>
+      <child link="wrist_camera_link"/>
+      <origin xyz="${palm_depth/2} 0 ${finger_height/2 + 0.01}" rpy="0 0.35 0"/>
+    </joint>
+  </xacro:macro>
+
+  <!-- ================= PARAMETERS ================= -->
+  <xacro:arg name="base_radius"  default="0.25"/>
+  <xacro:arg name="base_height"  default="0.30"/>
+  <xacro:arg name="link1_length" default="0.40"/>
+  <xacro:arg name="link2_length" default="0.40"/>
+  <xacro:arg name="gripper_span" default="0.18"/>
+
+  <xacro:property name="base_radius"  value="$(arg base_radius)"/>
+  <xacro:property name="base_height"  value="$(arg base_height)"/>
+  <xacro:property name="link1_length" value="$(arg link1_length)"/>
+  <xacro:property name="link2_length" value="$(arg link2_length)"/>
+  <xacro:property name="gripper_span" value="$(arg gripper_span)"/>
+
+  <xacro:property name="reach_low"    value="0.4"/>
+  <xacro:property name="reach_high"   value="1.0"/>
+  <xacro:property name="reach_margin" value="0.05"/>
+
+  <xacro:property name="lift_lower_raw" value="${reach_low - reach_margin - base_height}"/>
+  <xacro:if value="${lift_lower_raw &gt; 0.0}">
+    <xacro:property name="lift_lower" value="${lift_lower_raw}"/>
+  </xacro:if>
+  <xacro:unless value="${lift_lower_raw &gt; 0.0}">
+    <xacro:property name="lift_lower" value="0.0"/>
+  </xacro:unless>
+  <xacro:property name="lift_upper"    value="${reach_high + reach_margin - base_height}"/>
+  <xacro:property name="column_radius" value="0.04"/>
+  <xacro:property name="column_height" value="${lift_upper + 0.08}"/>
+
+  <!-- ================= ROBOT ================= -->
+  <xacro:base name="base_link" base_radius="${base_radius}" base_height="${base_height}"/>
+
+  <xacro:arm parent="base_link"
+             column_radius="${column_radius}" column_height="${column_height}"
+             lift_lower="${lift_lower}" lift_upper="${lift_upper}"
+             link1_length="${link1_length}" link2_length="${link2_length}">
+    <origin xyz="0 0 ${base_height}" rpy="0 0 0"/>
+  </xacro:arm>
+
+  <xacro:gripper parent="link2" gripper_span="${gripper_span}">
+    <origin xyz="${link2_length} 0 0" rpy="0 0 0"/>
+  </xacro:gripper>
+
+</robot>

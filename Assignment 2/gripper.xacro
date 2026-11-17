@@ -1,0 +1,136 @@
+<?xml version="1.0"?>
+<!--
+  gripper.xacro : wrist roll + 2-finger parallel gripper with rubber pads and a wrist camera.
+  Finger joints are 0 when closed and gripper_span/2 when fully open, so the
+  maximum opening between the finger pads is exactly ${gripper_span}.
+  The frame "tcp_link" sits in the middle of the finger pads (tool centre point).
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <material name="gripper_black"><color rgba="0.10 0.10 0.10 1.0"/></material>
+  <material name="gripper_silver"><color rgba="0.75 0.75 0.78 1.0"/></material>
+  <material name="cam_blue"><color rgba="0.15 0.25 0.60 1.0"/></material>
+
+  <xacro:macro name="gripper_box_inertia" params="m x y z cx:=0.0">
+    <inertial>
+      <origin xyz="${cx} 0 0" rpy="0 0 0"/>
+      <mass value="${m}"/>
+      <inertia ixx="${m/12.0*(y*y+z*z)}" ixy="0.0" ixz="0.0"
+               iyy="${m/12.0*(x*x+z*z)}" iyz="0.0"
+               izz="${m/12.0*(x*x+y*y)}"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="gripper" params="parent *origin gripper_span
+                                      finger_length:=0.08 finger_thickness:=0.015
+                                      finger_height:=0.06 palm_depth:=0.04
+                                      roll_lower:=-2.4 roll_upper:=2.4
+                                      palm_mass:=0.4 finger_mass:=0.1">
+
+    <xacro:property name="palm_width" value="${gripper_span + 2*finger_thickness}"/>
+
+    <!-- wrist roll (rotation about the forearm axis, used to tilt the carton for pouring) -->
+    <joint name="wrist_roll_joint" type="revolute">
+      <parent link="${parent}"/>
+      <child link="gripper_base_link"/>
+      <xacro:insert_block name="origin"/>
+      <axis xyz="1 0 0"/>
+      <limit lower="${roll_lower}" upper="${roll_upper}" effort="20.0" velocity="1.5"/>
+    </joint>
+
+    <link name="gripper_base_link">
+      <xacro:gripper_box_inertia m="${palm_mass}" x="${palm_depth}" y="${palm_width}" z="${finger_height}" cx="${palm_depth/2}"/>
+      <visual>
+        <origin xyz="${palm_depth/2} 0 0" rpy="0 0 0"/>
+        <geometry><box size="${palm_depth} ${palm_width} ${finger_height}"/></geometry>
+        <material name="gripper_black"/>
+      </visual>
+      <collision>
+        <origin xyz="${palm_depth/2} 0 0" rpy="0 0 0"/>
+        <geometry><box size="${palm_depth} ${palm_width} ${finger_height}"/></geometry>
+      </collision>
+    </link>
+
+    <!-- left finger (+y side) -->
+    <link name="left_finger_link">
+      <xacro:gripper_box_inertia m="${finger_mass}" x="${finger_length}" y="${finger_thickness}" z="${finger_height}" cx="${finger_length/2}"/>
+      <!-- silver body -->
+      <visual>
+        <origin xyz="${finger_length/2} ${(finger_thickness+0.004)/2} 0" rpy="0 0 0"/>
+        <geometry><box size="${finger_length} ${finger_thickness-0.004} ${finger_height}"/></geometry>
+        <material name="gripper_silver"/>
+      </visual>
+      <!-- rubber pad on the inner face -->
+      <visual>
+        <origin xyz="${finger_length*0.65} 0.002 0" rpy="0 0 0"/>
+        <geometry><box size="${finger_length*0.6} 0.004 ${finger_height-0.01}"/></geometry>
+        <material name="gripper_black"/>
+      </visual>
+      <collision>
+        <origin xyz="${finger_length/2} ${finger_thickness/2} 0" rpy="0 0 0"/>
+        <geometry><box size="${finger_length} ${finger_thickness} ${finger_height}"/></geometry>
+      </collision>
+    </link>
+
+    <joint name="left_finger_joint" type="prismatic">
+      <parent link="gripper_base_link"/>
+      <child link="left_finger_link"/>
+      <origin xyz="${palm_depth} 0 0" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="0.0" upper="${gripper_span/2}" effort="40.0" velocity="0.1"/>
+    </joint>
+
+    <!-- right finger (-y side), mirrors the left one -->
+    <link name="right_finger_link">
+      <xacro:gripper_box_inertia m="${finger_mass}" x="${finger_length}" y="${finger_thickness}" z="${finger_height}" cx="${finger_length/2}"/>
+      <!-- silver body -->
+      <visual>
+        <origin xyz="${finger_length/2} ${-(finger_thickness+0.004)/2} 0" rpy="0 0 0"/>
+        <geometry><box size="${finger_length} ${finger_thickness-0.004} ${finger_height}"/></geometry>
+        <material name="gripper_silver"/>
+      </visual>
+      <!-- rubber pad on the inner face -->
+      <visual>
+        <origin xyz="${finger_length*0.65} -0.002 0" rpy="0 0 0"/>
+        <geometry><box size="${finger_length*0.6} 0.004 ${finger_height-0.01}"/></geometry>
+        <material name="gripper_black"/>
+      </visual>
+      <collision>
+        <origin xyz="${finger_length/2} ${-finger_thickness/2} 0" rpy="0 0 0"/>
+        <geometry><box size="${finger_length} ${finger_thickness} ${finger_height}"/></geometry>
+      </collision>
+    </link>
+
+    <joint name="right_finger_joint" type="prismatic">
+      <parent link="gripper_base_link"/>
+      <child link="right_finger_link"/>
+      <origin xyz="${palm_depth} 0 0" rpy="0 0 0"/>
+      <axis xyz="0 -1 0"/>
+      <limit lower="0.0" upper="${gripper_span/2}" effort="40.0" velocity="0.1"/>
+      <mimic joint="left_finger_joint" multiplier="1.0" offset="0.0"/>
+    </joint>
+
+    <!-- tool centre point: middle of the finger pads -->
+    <link name="tcp_link"/>
+    <joint name="tcp_joint" type="fixed">
+      <parent link="gripper_base_link"/>
+      <child link="tcp_link"/>
+      <origin xyz="${palm_depth + finger_length/2} 0 0" rpy="0 0 0"/>
+    </joint>
+
+    <!-- wrist camera: looks forward, slightly down -->
+    <link name="wrist_camera_link">
+      <visual>
+        <geometry><box size="0.025 0.06 0.02"/></geometry>
+        <material name="cam_blue"/>
+      </visual>
+    </link>
+    <joint name="wrist_camera_joint" type="fixed">
+      <parent link="gripper_base_link"/>
+      <child link="wrist_camera_link"/>
+      <origin xyz="${palm_depth/2} 0 ${finger_height/2 + 0.01}" rpy="0 0.35 0"/>
+    </joint>
+
+  </xacro:macro>
+
+</robot>
